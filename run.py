@@ -14,7 +14,6 @@ def load_script(name):
         recorder = events.recorder()
         module.apply_script(recorder)
         script_recorders[name] = recorder
-        events.invoke('load_script_%s' % name)
     except ImportError as e:
         print "(script '%s' not loaded: %r)" % (name, e)
     except (AttributeError, TypeError) as e:

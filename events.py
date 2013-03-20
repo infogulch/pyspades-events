@@ -68,7 +68,7 @@ class Events(object):
                 # all properties are objects, so when they are copied
                 # only references are made; so changes to one apply to all
                 self.events = existing.events
-                self.default = existing.default
+                self._default = existing._default
                 self.recorded = set()
             
             def _subscribe(self, func, name, level):
