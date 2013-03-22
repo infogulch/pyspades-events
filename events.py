@@ -1,4 +1,10 @@
+from itertools import chain
+
+from args import *
+
 EVENT_LEVELS = BLOCK, CONSUME, NOTIFY = range(3)
+
+S_INVOKE = '(Error invoking event %s on %r with args %r: %r)'
 
 # events:          dict of (event_name:handler_levels)
 # handler_levels:  3-tuple of sets of functions
@@ -20,6 +26,7 @@ class Events(object):
             self._default[0] = value
     
     def _subscribe(self, func, name, level):
+        argspec_set(func)
         self.events[name][level].add(func)
     
     # def subscribe(self, func, name = None, level = None):
@@ -30,6 +37,7 @@ class Events(object):
         level = args.pop(0) if len(args) and args[0] in EVENT_LEVELS else self.default
         def sub(func):
             name = (cname or func.__name__).lower()
+            argspec_set(func)
             if not self.events.has_key(name):
                 self.events.setdefault(name, (set(), set(), set()))
             self._subscribe(func, name, level)
@@ -50,17 +58,27 @@ class Events(object):
     
     def invoke(self, name, *args, **kwargs):
         max_level = kwargs.get('max_level', NOTIFY)
+        strict = bool(kwargs.get('strict', False))
         if not self.events.has_key(name):
             return None
         event = self.events[name]
-        for level in EVENT_LEVELS:
-            if level > max_level:
-                break
-            for func in event[level]:
-                # todo: wrap in try block
+        level = 0
+        for func in chain(*event[:max_level+1]):
+            if not argspec_iscompat(func, len(args)):
+                if strict:
+                    raise ArgCountError(func, len(args))
+                print S_INVOKE % (name, func, args, 'Invalid number of args')
+                continue
+            try:
                 result = func(*args)
-                if level < NOTIFY and result:
-                    return result
+            except Exception as e:
+                if strict:
+                    raise
+                print S_INVOKE % (name, func, args, e)
+            if level < NOTIFY and result:
+                return result
+            level += 1
+            result = None
         return None
     
     def recorder(self):
