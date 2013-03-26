@@ -1,6 +1,6 @@
 from itertools import chain
 
-from args import *
+from args import argspec_set, argspec_iscompat, ArgCountError
 
 EVENT_LEVELS = BLOCK, CONSUME, NOTIFY = range(3)
 
