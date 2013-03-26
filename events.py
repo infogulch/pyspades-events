@@ -60,23 +60,23 @@ class Events(object):
         strict = bool(kwargs.get('strict', False))
         if not self.events.has_key(name):
             return None
-        level = 0
-        for func in chain(*self.events[name]):
-            if not argspec_iscompat(func, len(args)):
-                if strict:
-                    raise ArgCountError(func, len(args))
-                print S_INVOKE % (name, func, args, 'Invalid number of args')
-                continue
-            try:
-                result = func(*args)
-            except Exception as e:
-                if strict:
-                    raise
-                print S_INVOKE % (name, func, args, e)
-            if level < NOTIFY and result:
-                return result
-            level += 1
-            result = None
+        for level in EVENT_LEVELS:
+            for func in self.events[name][level]:
+                if not argspec_iscompat(func, len(args)):
+                    if strict:
+                        raise ArgCountError(func, len(args))
+                    print S_INVOKE % (name, func, args, 'Invalid number of args')
+                    continue
+                try:
+                    result = func(*args)
+                except Exception as e:
+                    if strict:
+                        raise
+                    print S_INVOKE % (name, func, args, e)
+                else:
+                    if level < NOTIFY and result is not None:
+                        return result
+                result = None
         return None
     
     def recorder(self):
