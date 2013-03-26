@@ -1,4 +1,5 @@
 import sys
+import os
 
 from events import Events
 from connection import Connection
@@ -7,35 +8,51 @@ events = Events()
 connection = Connection(events)
 script_recorders = {}
 
-def load_script(name):
-    fullname = "scripts.%s" % name
+def _pop_modules(parts):
+    while parts:
+        sys.modules.pop(".".join(parts), None)
+        parts = parts[:-1]
+
+def load_script(name, module = "scripts"):
+    parts = module, name
+    error = None
     try:
-        module = __import__(fullname, globals(), locals(), [fullname])
+        if parts in script_recorders:
+            raise ImportError("Script already loaded")
+        module = __import__(".".join(parts), globals(), locals(), ["script"])
         recorder = events.recorder()
         module.apply_script(recorder)
-        script_recorders[name] = recorder
     except ImportError as e:
-        print "(script '%s' not loaded: %r)" % (name, e)
-    except (AttributeError, TypeError) as e:
-        print "(script '%s' not loaded: %r)" % (name, e)
-        sys.modules.pop(fullname, None)
-        sys.modules.pop('scripts', None)
-
-def unload_script(name):
-    if name in script_recorders:
-        events.invoke('unload_script_%s' % name)
-        fullname = "scripts.%s" % name
-        script_recorders[name].unsubscribe_all()
-        script_recorders.pop(name, None)
-        sys.modules.pop(fullname, None)
-        sys.modules.pop('scripts', None)
+        error = "Script '%s' not loaded: %r" % (".".join(parts), e)
+    except (AttributeError, TypeError, Exception) as e:
+        error = "Script '%s' not loaded: %r" % (".".join(parts), e)
+        _pop_modules(parts)
     else:
-        print "Error, script not loaded"
+        script_recorders[parts] = recorder
+    if error:
+        print error
+        return error
+
+def unload_script(name, module = "scripts"):
+    parts = module, name
+    if parts in script_recorders:
+        script_recorders[parts].unsubscribe_all()
+        script_recorders.pop(parts, None)
+        _pop_modules(parts)
+    else:
+        error = "Script '%s' not unloaded: it doesn't exist" % (name)
+        print error
+        return error
 
 events.subscribe(load_script)
 events.subscribe(unload_script)
 
-# load scripts
+# load all core scripts
+for fname in os.listdir("./core"):
+    if fname.endswith(".py") and fname != '__init__.py':
+        events.invoke('load_script', fname[:-3], "core")
+
+# load selected user scripts
 script_names = ["a","b","c","d","e"]
 for name in script_names:
     events.invoke('load_script', name)
