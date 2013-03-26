@@ -57,13 +57,11 @@ class Events(object):
             self._unsubscribe(func, name, level)
     
     def invoke(self, name, *args, **kwargs):
-        max_level = kwargs.get('max_level', NOTIFY)
         strict = bool(kwargs.get('strict', False))
         if not self.events.has_key(name):
             return None
-        event = self.events[name]
         level = 0
-        for func in chain(*event[:max_level+1]):
+        for func in chain(*self.events[name]):
             if not argspec_iscompat(func, len(args)):
                 if strict:
                     raise ArgCountError(func, len(args))
