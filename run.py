@@ -53,7 +53,7 @@ for fname in os.listdir("./core"):
         events.invoke('load_script', fname[:-3], "core")
 
 # load selected user scripts
-script_names = ["a","b","c","d","e"]
+script_names = ["a","b","c","d","f"]
 for name in script_names:
     events.invoke('load_script', name)
 
@@ -72,4 +72,17 @@ print "load script a"
 events.invoke('load_script', 'a')
 
 # invoke the event again
+connection.invoke('some_event')
+
+print "load script e"
+
+# load blocker script
+events.invoke('load_script', 'e')
+
+events.invoke('some_event', connection)
+
+print "unload script e"
+
+events.invoke('unload_script', 'e')
+
 connection.invoke('some_event')
