@@ -2,27 +2,27 @@ from itertools import chain
 
 from args import argspec_set, argspec_iscompat, ArgCountError
 
-EVENT_LEVELS = BLOCK, CONSUME, NOTIFY = range(3)
-
 S_INVOKE = '(Error invoking event %s on %r with args %r: %r)'
 
 # events:          dict of (event_name:handler_levels)
 # handler_levels:  3-tuple of sets of functions
 
 class Events(object):
+    EVENT_LEVELS = BLOCK, CONSUME, NOTIFY = range(3)
+    
     def __init__(self, default = NOTIFY):
         self.default = default
         self.events = {}
     
     @property
     def default(self):
-        return self._default[0] if hasattr(self, "_default") else NOTIFY
+        return self._default[0] if hasattr(self, "_default") else self.NOTIFY
     
     @default.setter
     def default(self, value):
         if not hasattr(self, "_default"):
-            self._default = [NOTIFY]
-        if value in EVENT_LEVELS:
+            self._default = [self.NOTIFY]
+        if value in self.EVENT_LEVELS:
             self._default[0] = value
     
     def _subscribe(self, func, name, level):
@@ -34,7 +34,7 @@ class Events(object):
         args = list(args)
         func = args.pop(0) if len(args) and hasattr(args[0], "__call__") else None
         cname = args.pop(0) if len(args) else None
-        level = args.pop(0) if len(args) and args[0] in EVENT_LEVELS else self.default
+        level = args.pop(0) if len(args) and args[0] in self.EVENT_LEVELS else self.default
         def sub(func):
             name = (cname or func.__name__).lower()
             argspec_set(func)
@@ -51,7 +51,7 @@ class Events(object):
     
     def unsubscribe(self, func, name = None, level = None):
         name = name.lower()
-        if level not in EVENT_LEVELS:
+        if level not in self.EVENT_LEVELS:
             level = self.default
         if self.events.has_key(name):
             self._unsubscribe(func, name, level)
@@ -60,7 +60,7 @@ class Events(object):
         strict = bool(kwargs.get('strict', False))
         if not self.events.has_key(name):
             return None
-        for level in EVENT_LEVELS:
+        for level in self.EVENT_LEVELS:
             for func in self.events[name][level]:
                 if not argspec_iscompat(func, len(args)):
                     if strict:
@@ -74,7 +74,7 @@ class Events(object):
                         raise
                     print S_INVOKE % (name, func, args, e)
                 else:
-                    if level < NOTIFY and result is not None:
+                    if level < self.NOTIFY and result is not None:
                         return result
                 result = None
         return None
