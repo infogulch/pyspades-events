@@ -1,6 +1,6 @@
 from itertools import chain
 
-from args import argspec_set, argspec_iscompat, ArgCountError
+import argspec
 
 S_INVOKE = '(Error invoking event %s on %r with args %r: %r)'
 
@@ -26,7 +26,7 @@ class Events(object):
             self._default[0] = value
     
     def _subscribe(self, func, name, level):
-        argspec_set(func)
+        argspec.set(func)
         self.events[name][level].add(func)
     
     # def subscribe(self, func, name = None, level = None):
@@ -37,7 +37,6 @@ class Events(object):
         level = args.pop(0) if len(args) and args[0] in self.EVENT_LEVELS else self.default
         def sub(func):
             name = (cname or func.__name__).lower()
-            argspec_set(func)
             if not self.events.has_key(name):
                 self.events.setdefault(name, (set(), set(), set()))
             self._subscribe(func, name, level)
@@ -62,9 +61,9 @@ class Events(object):
             return None
         for level in self.EVENT_LEVELS:
             for func in self.events[name][level]:
-                if not argspec_iscompat(func, len(args)):
+                if not argspec.iscompat(func, len(args)):
                     if strict:
-                        raise ArgCountError(func, len(args))
+                        raise argspec.ArgCountError(func, len(args))
                     print S_INVOKE % (name, func, args, 'Invalid number of args')
                     continue
                 try:
